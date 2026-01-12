@@ -194,6 +194,16 @@ public final class Reachability: @unchecked Sendable {
         #endif
     }()
 
+    // MARK: - Main Queue Helper
+    private static func executeOnMainQueueIfNecessary(
+        _ block: @Sendable @escaping () -> Void
+    ) {
+        if Thread.isMainThread {
+            block()
+        } else {
+            DispatchQueue.main.async(execute: block)
+        }
+    }
     /// Stops monitoring when the object is deallocated.
     deinit { stop() }
 }
@@ -233,9 +243,7 @@ private extension Reachability {
             reachability.reachabilityFlags = reachability.flags
 
             // Post on main for UI-safety.
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: Network.flagsChanged, object: reachability)
-            }
+            reachability.postFlagsChanged()
         }
 
         // Install callback.
@@ -250,9 +258,9 @@ private extension Reachability {
             throw Network.Error.failedToSetDispatchQueue
         }
 
-        // Post an initial notification once monitoring begins.
+        // Ensure initial notification is ordered with SystemConfiguration callbacks
         Reachability.serialQueue.async { [weak self] in
-            NotificationCenter.default.post(name: Network.flagsChanged, object: self)
+            self?.postFlagsChanged()
         }
 
         isRunning = true
@@ -268,6 +276,14 @@ private extension Reachability {
         SCNetworkReachabilitySetCallback(reachability, nil, nil)
         SCNetworkReachabilitySetDispatchQueue(reachability, nil)
     }
+    
+    // MARK: - Notification Helpers
+    private func postFlagsChanged() {
+        Self.executeOnMainQueueIfNecessary { [weak self] in
+            guard let self else { return }
+            NotificationCenter.default.post(name: Network.flagsChanged, object: self)
+        }
+    }
 
     // MARK: Flags
 
@@ -281,19 +297,6 @@ private extension Reachability {
         return withUnsafeMutablePointer(to: &flags) {
             SCNetworkReachabilityGetFlags(reachability, UnsafeMutablePointer($0))
         } ? flags : SCNetworkReachabilityFlags()
-    }
-
-    /**
-     Compares the current flags with the previously cached flags and posts `flagsChanged`
-     if they differ.
-
-     Note: this is not currently used by `start()` because the callback already performs
-     the same change detection.
-     */
-    func flagsChanged() {
-        guard flags != reachabilityFlags else { return }
-        reachabilityFlags = flags
-        NotificationCenter.default.post(name: Network.flagsChanged, object: self)
     }
 
     // MARK: Flag helpers (booleans)
