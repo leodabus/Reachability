@@ -37,34 +37,34 @@ public final class Reachability: @unchecked Sendable {
     // MARK: Stored properties
 
     /// The hostname being monitored (if created via hostname). `nil` when created via address.
-    var hostname: String?
+    public private(set) var hostname: String?
 
     /// Whether the reachability reference was created using an IPv6 zero address fallback.
-    var ipv6 = false
+    public private(set) var ipv6 = false
 
     /// Indicates whether callbacks/dispatch queue are currently installed.
-    var isRunning = false
+    public private(set) var isRunning = false
 
     /**
      Controls whether WWAN (cellular) is considered "reachable".
      - If `false`, cellular connectivity will be treated as unreachable.
      */
-    var isReachableOnWWAN: Bool
+    public var isReachableOnWWAN: Bool
 
     /// The underlying SystemConfiguration reachability reference.
-    var reachability: SCNetworkReachability
+    private var reachability: SCNetworkReachability
 
     /**
      The last observed reachability flags.
      Used to detect changes and avoid posting duplicate notifications.
      */
-    var reachabilityFlags = SCNetworkReachabilityFlags()
+    public private(set) var reachabilityFlags = SCNetworkReachabilityFlags()
 
     /**
      Serial queue used by SystemConfiguration to deliver reachability callbacks.
      Keeping it serial makes state updates deterministic and avoids flag races.
      */
-    static let serialQueue = DispatchQueue(label: "ReachabilityQueue")
+    static private let serialQueue = DispatchQueue(label: "ReachabilityQueue")
 
     // MARK: Initializers
 
