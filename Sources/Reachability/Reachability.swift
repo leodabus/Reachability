@@ -336,7 +336,7 @@ private extension Reachability {
 }
 
 // MARK: - Convenience
-fileprivate extension StringProtocol {
+public extension StringProtocol {
     /// Convenience factory to create a `Reachability` using a hostname string.
     func reachability() throws -> Reachability { try Reachability(hostname: self) }
 }
